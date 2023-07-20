@@ -1,0 +1,51 @@
+name: Deploy to AWS Amplify
+on:
+  push:
+    branches:
+      - main
+env:
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit test
+        run: npm test
+
+      - name: Generate code coverage report
+        run:  npm test -- --coverage
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v1.9.1
+      
+      - name: SonarQube Quality Gate Check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        with:
+          scanMetadataReportFile: .scannerwork/report-task.txt
+
+      #- name: Artifact Version
+    
+  CD:
+    runs-on: ubuntu-latest
+    needs: CI
+    steps:
+    - name: deploy
+      run: |
+        URL="${{ secrets.WEBHOOK_URL }}"
+        curl -X POST -d {} "$URL" -H "Content-Type: application/json"
